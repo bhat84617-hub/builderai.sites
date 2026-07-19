@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Code2, Image as ImageIcon, Zap, Check, Globe, Users, Sparkles, ExternalLink } from "lucide-react"
 import { useState } from "react"
-import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 export default function LandingPage() {
   const [prompt, setPrompt] = useState("")
-  const { user } = useStore()
+  const { data: session } = useSession()
   const router = useRouter()
 
   const handleGenerate = () => {
@@ -35,9 +35,9 @@ export default function LandingPage() {
             Describe your idea and get a beautiful, ready-to-deploy landing page in seconds. No coding required.
           </p>
           <div className="flex items-center gap-3 justify-center mb-12">
-            <Link href={user ? "/generate" : "/signup"}>
+            <Link href={session?.user ? "/generate" : "/signup"}>
               <Button size="xl" className="bg-replit-accent hover:bg-replit-accent-hover">
-                {user ? "Create a Site" : "Get Started Free"}
+                {session?.user ? "Create a Site" : "Get Started Free"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -145,8 +145,8 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href={user ? "/pricing" : "/signup"}>
-                <Button className="w-full mt-6" variant={p.popular ? "default" : "secondary"}>{p.name === "Free" ? "Get Started" : user ? "Buy Now" : "Sign Up"}</Button>
+              <Link href={session?.user ? "/pricing" : "/signup"}>
+                <Button className="w-full mt-6" variant={p.popular ? "default" : "secondary"}>{p.name === "Free" ? "Get Started" : session?.user ? "Buy Now" : "Sign Up"}</Button>
               </Link>
             </div>
           ))}
@@ -158,9 +158,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-3xl px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-replit-text mb-4">Start building today</h2>
           <p className="text-replit-muted mb-8">No credit card required. 100% free to start.</p>
-          <Link href={user ? "/generate" : "/signup"}>
+          <Link href={session?.user ? "/generate" : "/signup"}>
             <Button size="xl" className="bg-replit-accent hover:bg-replit-accent-hover">
-              {user ? "Create Your First Site" : "Get Started Free"}
+              {session?.user ? "Create Your First Site" : "Get Started Free"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -187,3 +187,7 @@ export default function LandingPage() {
     </div>
   )
 }
+
+
+
+

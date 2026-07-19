@@ -5,53 +5,47 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useStore } from "@/lib/store"
+import { signIn } from "next-auth/react"
 import { Code2, Eye, EyeOff } from "lucide-react"
 
 export default function SignupPage() {
-  const { users, setUser, addUser } = useStore()
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     if (!name || !email || !password) { setError("Please fill in all fields"); return }
     if (password.length < 6) { setError("Password must be at least 6 characters"); return }
-    if (users.find((u) => u.email === email)) { setError("Email already registered"); return }
-    const newUser = {
-      id: `user-${Date.now()}`,
-      name,
-      email,
-      plan: "FREE" as const,
-      apiKeys: [] as string[],
-      projects: [],
-      joinedAt: new Date().toISOString(),
-      provider: "email" as const,
+    setLoading(true)
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
+      const data = await res.json()
+      if (data.error) { setError(data.error); setLoading(false); return }
+
+      const signInRes = await signIn("credentials", { email, password, redirect: false })
+      if (signInRes?.error) { setError("Sign in failed"); setLoading(false); return }
+
+      router.push("/dashboard")
+      router.refresh()
+    } catch {
+      setError("Something went wrong")
+      setLoading(false)
     }
-    addUser(newUser)
-    setUser(newUser)
-    router.push("/dashboard")
   }
 
-  const handleGoogle = () => {
-    const newUser = {
-      id: `user-${Date.now()}`,
-      name: "Google User",
-      email: `google_${Date.now()}@gmail.com`,
-      plan: "FREE" as const,
-      apiKeys: [] as string[],
-      projects: [],
-      joinedAt: new Date().toISOString(),
-      provider: "google" as const,
-    }
-    addUser(newUser)
-    setUser(newUser)
-    router.push("/dashboard")
+  const handleGoogle = async () => {
+    await signIn("google", { callbackUrl: "/dashboard" })
   }
 
   return (
@@ -65,10 +59,7 @@ export default function SignupPage() {
           <p className="mt-1 text-sm text-replit-muted">Start building for free</p>
         </div>
 
-        <button
-          onClick={handleGoogle}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-replit-border bg-replit-card px-4 py-2.5 text-sm font-medium text-replit-text hover:bg-replit-hover transition-all mb-4"
-        >
+        <button onClick={handleGoogle} className="flex w-full items-center justify-center gap-3 rounded-xl border border-replit-border bg-white px-4 py-2.5 text-sm font-medium text-replit-text hover:bg-replit-hover transition-all mb-4 shadow-sm">
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -93,7 +84,9 @@ export default function SignupPage() {
             </button>
           </div>
           {error && <p className="text-sm text-replit-red">{error}</p>}
-          <Button type="submit" className="w-full">Create Account</Button>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Creating account..." : "Create Account"}
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-replit-muted">
@@ -104,3 +97,7 @@ export default function SignupPage() {
     </div>
   )
 }
+
+
+
+

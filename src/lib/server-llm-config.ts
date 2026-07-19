@@ -1,29 +1,23 @@
-import fs from "fs"
-import path from "path"
-import type { LLMConfig } from "./llm"
+import { connectDB } from "./db"
+import { LLMConfig } from "./models"
+import type { LLMConfig as LLMConfigType } from "./llm"
 
-const CONFIG_PATH = path.join(process.cwd(), "llm-config.json")
-
-export function readLLMConfig(): LLMConfig | null {
+export async function readLLMConfig(): Promise<LLMConfigType | null> {
   try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      const data = fs.readFileSync(CONFIG_PATH, "utf-8")
-      return JSON.parse(data)
-    }
-  } catch {
-    // ignore
-  }
-  return null
+    await connectDB()
+    const doc = await LLMConfig.findOne()
+    if (!doc) return null
+    return { providerId: doc.providerId, apiKey: doc.apiKey, modelId: doc.modelId, baseUrl: doc.baseUrl }
+  } catch { return null }
 }
 
-export function writeLLMConfig(config: LLMConfig): void {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8")
+export async function writeLLMConfig(config: LLMConfigType): Promise<void> {
+  await connectDB()
+  await LLMConfig.deleteMany()
+  await LLMConfig.create(config)
 }
 
-export function clearLLMConfig(): void {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) fs.unlinkSync(CONFIG_PATH)
-  } catch {
-    // ignore
-  }
+export async function clearLLMConfig(): Promise<void> {
+  await connectDB()
+  await LLMConfig.deleteMany()
 }

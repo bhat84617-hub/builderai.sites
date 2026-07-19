@@ -8,7 +8,7 @@ const HF_TOKEN = process.env.HF_TOKEN || ""
 export async function POST(req: Request) {
   try {
     const { prompt, type, style } = await req.json()
-    const llmConfig = readLLMConfig()
+    const llmConfig = await readLLMConfig()
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })

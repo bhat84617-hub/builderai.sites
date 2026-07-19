@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { useStore } from "@/lib/store"
+import { useSession } from "next-auth/react"
 import { PROVIDERS, getProvider } from "@/lib/llm"
 import { Check, ExternalLink, Key, Save, Trash2, Zap, Loader2 } from "lucide-react"
 
 export default function AdminSettingsPage() {
-  const { user } = useStore()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -25,9 +25,10 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (!user || user.email !== "bhat84617@gmail.com") { router.push("/dashboard"); return }
-    loadConfig()
-  }, [user, router])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user && session.user.email !== "bhat84617@gmail.com") { router.push("/dashboard"); return }
+    if (session?.user) loadConfig()
+  }, [session, status, router])
 
   const loadConfig = async () => {
     try {
@@ -83,7 +84,8 @@ export default function AdminSettingsPage() {
     } catch {} finally { setSaving(false) }
   }
 
-  if (!user || user.email !== "bhat84617@gmail.com") return null
+  if (status === "loading") return <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center"><Loader2 className="h-8 w-8 text-replit-accent animate-spin" /></div>
+  if (!session?.user || session.user.email !== "bhat84617@gmail.com") return null
   if (loading) return <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center"><Loader2 className="h-8 w-8 text-replit-accent animate-spin" /></div>
 
   return (
@@ -182,3 +184,7 @@ export default function AdminSettingsPage() {
     </div>
   )
 }
+
+
+
+

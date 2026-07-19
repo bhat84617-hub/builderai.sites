@@ -3,12 +3,12 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useStore } from "@/lib/store"
-import { LogOut, Settings, LayoutDashboard, ChevronDown, Code2, CreditCard } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
+import { LayoutDashboard, ChevronDown, Code2, CreditCard, Settings, LogOut } from "lucide-react"
 import { useState } from "react"
 
 export function Navbar() {
-  const { user, setUser } = useStore()
+  const { data: session } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -24,7 +24,7 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3">
-          {user ? (
+          {session?.user ? (
             <>
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">
@@ -44,13 +44,10 @@ export function Navbar() {
                 </Button>
               </Link>
               <div className="relative">
-                <button
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-replit-hover transition-colors"
-                >
+                <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-replit-hover transition-colors">
                   <Avatar>
-                    <AvatarImage src={user.image} />
-                    <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    <AvatarImage src={session.user.image || ""} />
+                    <AvatarFallback>{(session.user.name || "U")[0]}</AvatarFallback>
                   </Avatar>
                   <ChevronDown className="h-4 w-4 text-replit-muted" />
                 </button>
@@ -59,25 +56,22 @@ export function Navbar() {
                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                     <div className="absolute right-0 top-full mt-1 z-20 w-56 rounded-xl border border-replit-border bg-white p-1 shadow-lg animate-scale-in">
                       <div className="px-3 py-2 border-b border-replit-border">
-                        <p className="text-sm font-medium text-replit-text">{user.name}</p>
-                        <p className="text-xs text-replit-muted">{user.email}</p>
+                        <p className="text-sm font-medium text-replit-text">{session.user.name}</p>
+                        <p className="text-xs text-replit-muted">{session.user.email}</p>
                       </div>
                       <Link href="/pricing" onClick={() => setMenuOpen(false)}>
                         <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-replit-text hover:bg-replit-hover">
                           <CreditCard className="h-4 w-4" /> Upgrade Plan
                         </button>
                       </Link>
-                      {user.email === "bhat84617@gmail.com" && (
+                      {session.user.email === "bhat84617@gmail.com" && (
                         <Link href="/admin" onClick={() => setMenuOpen(false)}>
                           <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-replit-text hover:bg-replit-hover">
                             <Settings className="h-4 w-4" /> Admin Panel
                           </button>
                         </Link>
                       )}
-                      <button
-                        onClick={() => { setUser(null); setMenuOpen(false) }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-replit-red hover:bg-replit-hover"
-                      >
+                      <button onClick={() => { signOut(); setMenuOpen(false) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-replit-red hover:bg-replit-hover">
                         <LogOut className="h-4 w-4" /> Sign Out
                       </button>
                     </div>

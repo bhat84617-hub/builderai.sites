@@ -5,32 +5,37 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useStore } from "@/lib/store"
+import { signIn } from "next-auth/react"
 import { Code2, Eye, EyeOff } from "lucide-react"
 
 export default function LoginPage() {
-  const { users, setUser } = useStore()
   const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState("bhat84617@gmail.com")
+  const [password, setPassword] = useState("admin123")
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     if (!email || !password) { setError("Please fill in all fields"); return }
-    const found = users.find((u) => u.email === email)
-    if (!found) { setError("No account found with this email"); return }
-    if (found.password && found.password !== password) { setError("Wrong password"); return }
-    setUser(found)
-    router.push(found.id === "admin-1" ? "/admin" : "/dashboard")
+    setLoading(true)
+
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    })
+
+    setLoading(false)
+    if (res?.error) { setError("Invalid email or password"); return }
+    router.push(email === "bhat84617@gmail.com" ? "/admin" : "/dashboard")
+    router.refresh()
   }
 
-  const handleGoogle = () => {
-    const googleUser = users.find((u) => u.email === "amit@example.com")
-    if (googleUser) { setUser(googleUser); router.push("/dashboard") }
-    else setError("No Google account linked.")
+  const handleGoogle = async () => {
+    await signIn("google", { callbackUrl: "/dashboard" })
   }
 
   return (
@@ -44,10 +49,7 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-replit-muted">Sign in to continue building</p>
         </div>
 
-        <button
-          onClick={handleGoogle}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-replit-border bg-replit-card px-4 py-2.5 text-sm font-medium text-replit-text hover:bg-replit-hover transition-all mb-4"
-        >
+        <button onClick={handleGoogle} className="flex w-full items-center justify-center gap-3 rounded-xl border border-replit-border bg-white px-4 py-2.5 text-sm font-medium text-replit-text hover:bg-replit-hover transition-all mb-4 shadow-sm">
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -71,16 +73,18 @@ export default function LoginPage() {
             </button>
           </div>
           {error && <p className="text-sm text-replit-red">{error}</p>}
-          <Button type="submit" className="w-full">Sign In</Button>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
         </form>
 
         <div className="mt-6 pt-4 border-t border-replit-border">
           <p className="text-center text-xs text-replit-muted mb-3">Quick Demo Access</p>
           <div className="flex gap-2">
-            <button onClick={() => { setEmail("bhat84617@gmail.com"); setPassword("admin123") }} className="flex-1 rounded-lg border border-replit-border bg-replit-card px-3 py-2 text-xs text-replit-muted hover:text-replit-text hover:bg-replit-hover transition-all">
+            <button onClick={() => { setEmail("bhat84617@gmail.com"); setPassword("admin123") }} className="flex-1 rounded-lg border border-replit-border bg-white px-3 py-2 text-xs text-replit-muted hover:text-replit-text hover:bg-replit-hover transition-all shadow-sm">
               Admin Panel
             </button>
-            <button onClick={() => { setEmail("rahul@example.com"); setPassword("user123") }} className="flex-1 rounded-lg border border-replit-border bg-replit-card px-3 py-2 text-xs text-replit-muted hover:text-replit-text hover:bg-replit-hover transition-all">
+            <button onClick={() => { setEmail("rahul@example.com"); setPassword("user123") }} className="flex-1 rounded-lg border border-replit-border bg-white px-3 py-2 text-xs text-replit-muted hover:text-replit-text hover:bg-replit-hover transition-all shadow-sm">
               User Panel
             </button>
           </div>
@@ -93,3 +97,7 @@ export default function LoginPage() {
     </div>
   )
 }
+
+
+
+
