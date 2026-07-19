@@ -20,9 +20,12 @@ export default function AdminSettingsPage() {
   const [apiKey, setApiKey] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
   const [modelId, setModelId] = useState("")
+  const [customModel, setCustomModel] = useState("")
   const [saved, setSaved] = useState(false)
   const [hasConfig, setHasConfig] = useState(false)
   const [error, setError] = useState("")
+
+  const isCustomMode = modelId === "__custom__"
 
   useEffect(() => {
     if (status === "unauthenticated") { router.push("/login"); return }
@@ -39,6 +42,10 @@ export default function AdminSettingsPage() {
         setApiKey(data.config.apiKey || "")
         setBaseUrl(data.config.baseUrl || "")
         setModelId(data.config.modelId || "")
+        if (data.config.modelId && !data.config.modelId.includes(":free") && !PROVIDERS.find(p => p.id === data.config.providerId)?.models?.find((m: any) => m.id === data.config.modelId)) {
+          setCustomModel(data.config.modelId)
+          setModelId("__custom__")
+        }
         setHasConfig(true)
       }
     } catch {} finally {
@@ -51,6 +58,8 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     setError("")
+    const finalModelId = isCustomMode ? customModel : modelId
+    if (!finalModelId) { setError("Please select or enter a model"); setSaving(false); return }
     try {
       const res = await fetch("/api/admin/llm-config", {
         method: "POST",
@@ -58,7 +67,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify({
           providerId,
           apiKey,
-          modelId: modelId || provider?.models[0]?.id || "",
+          modelId: finalModelId,
           baseUrl: baseUrl || undefined,
         }),
       })
@@ -134,11 +143,14 @@ export default function AdminSettingsPage() {
             {provider && provider.models.length > 0 && (
               <div>
                 <label className="text-sm font-medium text-replit-text mb-1.5 block">Model</label>
-                <Select value={modelId} onChange={(e) => setModelId(e.target.value)}>
+                <Select value={isCustomMode ? "__custom__" : modelId} onChange={(e) => setModelId(e.target.value)}>
                   {provider.models.map((m) => (
                     <option key={m.id} value={m.id}>{m.name} {m.free ? "(Free)" : ""}</option>
                   ))}
                 </Select>
+                {isCustomMode && (
+                  <Input value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="e.g. google/gemini-pro:free" className="mt-2" />
+                )}
               </div>
             )}
 

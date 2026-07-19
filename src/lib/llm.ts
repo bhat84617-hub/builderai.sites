@@ -27,10 +27,16 @@ export const PROVIDERS: LLMProvider[] = [
     apiKeyPlaceholder: "sk-or-v1-...",
     docsUrl: "https://openrouter.ai/keys",
     models: [
+      { id: "openrouter/auto", name: "Auto (Best for prompt)", provider: "openrouter", free: false },
       { id: "mistralai/mistral-7b-instruct:free", name: "Mistral 7B (Free)", provider: "openrouter", free: true },
       { id: "meta-llama/llama-3.2-3b-instruct:free", name: "Llama 3.2 3B (Free)", provider: "openrouter", free: true },
+      { id: "meta-llama/llama-3.1-8b-instruct:free", name: "Llama 3.1 8B (Free)", provider: "openrouter", free: true },
       { id: "google/gemma-2-9b-it:free", name: "Gemma 2 9B (Free)", provider: "openrouter", free: true },
+      { id: "google/gemini-flash-1.5-8b:free", name: "Gemini Flash 1.5 8B (Free)", provider: "openrouter", free: true },
       { id: "microsoft/phi-3-mini-128k-instruct:free", name: "Phi-3 Mini (Free)", provider: "openrouter", free: true },
+      { id: "cognitivecomputations/dolphin-llama-3-8b-lex-unleashed:free", name: "Dolphin Llama 3 8B (Free)", provider: "openrouter", free: true },
+      { id: "sophosympatheia/rogue-rose-103b-v0.2:free", name: "Rogue Rose 103B (Free)", provider: "openrouter", free: true },
+      { id: "__custom__", name: "Custom Model (type any ID)", provider: "openrouter", free: true },
     ],
     formatBody: (system, user, model) => ({
       model,
