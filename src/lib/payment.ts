@@ -16,9 +16,10 @@ export interface PaymentResult {
 }
 
 export const PLANS: PaymentPlan[] = [
-  { id: "starter", name: "Starter", price: 9, currency: "INR", description: "For hobby projects", features: ["15 sites", "AI generation", "Priority generation", "Email support"] },
-  { id: "pro", name: "Pro", price: 29, currency: "INR", description: "For professionals", features: ["50 sites", "Priority AI", "Advanced templates", "Priority support", "Analytics"] },
-  { id: "agency", name: "Agency", price: 99, currency: "INR", description: "For teams & agencies", features: ["Unlimited sites", "White-label", "Team accounts", "API access", "Dedicated support"] },
+  { id: "free", name: "Free", price: 0, currency: "INR", description: "Get started for free", features: ["1 landing page", "Basic AI generation", "Community templates"] },
+  { id: "starter", name: "Starter", price: 99, currency: "INR", description: "For hobby projects", features: ["1 landing page", "AI generation", "Email support"] },
+  { id: "pro", name: "Pro", price: 999, currency: "INR", description: "For professionals", features: ["Full site", "Priority AI", "Advanced templates", "Priority support"] },
+  { id: "agency", name: "Agency", price: 2999, currency: "INR", description: "For teams & agencies", features: ["50 sites", "100 landing pages", "White-label", "Team accounts", "API access", "Dedicated support"] },
 ]
 
 interface RazorpayResponse {

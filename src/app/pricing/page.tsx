@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useSession } from "next-auth/react"
 import { PLANS, processPayment, type PaymentPlan } from "@/lib/payment"
-import { Check, Loader2, Lock, Shield, CreditCard } from "lucide-react"
+import { Check, Loader2, Lock, Shield, CreditCard, Sparkles } from "lucide-react"
 
 export default function PricingPage() {
   const { data: session, status } = useSession()
@@ -15,51 +15,11 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  if (status === "unauthenticated") {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-12">
-        <div className="text-center mb-10 animate-fade-in">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-replit-accent/10">
-            <CreditCard className="h-7 w-7 text-replit-accent" />
-          </div>
-          <h1 className="text-3xl font-bold text-replit-text mb-2">Choose your plan</h1>
-          <p className="text-replit-muted mb-6">Sign in to see your current plan and upgrade</p>
-          <Button onClick={() => router.push("/login")} className="bg-replit-accent hover:bg-replit-accent-hover text-white">
-            Sign In to Continue
-          </Button>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
-          {PLANS.map((plan) => (
-            <Card key={plan.id} className="relative overflow-hidden">
-              <CardContent className="p-6">
-                <div className="mb-4">
-                  <h3 className="text-lg font-bold text-replit-text">{plan.name}</h3>
-                  <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-replit-text">₹{plan.price}</span>
-                    <span className="text-sm text-replit-muted">/month</span>
-                  </div>
-                  <p className="text-sm text-replit-muted mt-1">{plan.description}</p>
-                </div>
-                <ul className="space-y-2.5 mb-6">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-replit-text">
-                      <Check className="h-4 w-4 text-replit-green shrink-0" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button onClick={() => router.push("/login")} className="w-full bg-replit-accent hover:bg-replit-accent-hover text-white">
-                  <Lock className="h-4 w-4 mr-1.5" /> Sign In to Buy
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   const handleBuy = async (plan: PaymentPlan) => {
+    if (plan.id === "free") {
+      router.push(session ? "/dashboard" : "/signup")
+      return
+    }
     setLoading(plan.id)
     setMessage(null)
     const result = await processPayment("razorpay", plan)
@@ -71,7 +31,7 @@ export default function PricingPage() {
     }
   }
 
-  const userPlan = (session?.user as any)?.plan || "FREE"
+  const userPlan = status === "authenticated" ? (session?.user as any)?.plan || "FREE" : null
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -80,7 +40,7 @@ export default function PricingPage() {
           <CreditCard className="h-7 w-7 text-replit-accent" />
         </div>
         <h1 className="text-3xl font-bold text-replit-text mb-2">Choose your plan</h1>
-        <p className="text-replit-muted">Upgrade to unlock more sites and features</p>
+        <p className="text-replit-muted">Unlock more sites and features as you grow</p>
       </div>
 
       {message && (
@@ -89,11 +49,14 @@ export default function PricingPage() {
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3 animate-fade-in">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in">
         {PLANS.map((plan) => {
-          const isCurrent = userPlan === plan.id.toUpperCase()
+          const isCurrent = userPlan && userPlan === plan.id.toUpperCase()
           return (
             <Card key={plan.id} className={`relative overflow-hidden ${isCurrent ? "ring-2 ring-replit-accent" : ""}`}>
+              {plan.id === "free" && !isCurrent && (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-replit-green to-replit-accent" />
+              )}
               {isCurrent && (
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-replit-accent to-replit-accent-light" />
               )}
@@ -101,8 +64,14 @@ export default function PricingPage() {
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-replit-text">{plan.name}</h3>
                   <div className="mt-2 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-replit-text">₹{plan.price}</span>
-                    <span className="text-sm text-replit-muted">/month</span>
+                    {plan.price === 0 ? (
+                      <span className="text-3xl font-bold text-replit-text">Free</span>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold text-replit-text">₹{plan.price}</span>
+                        <span className="text-sm text-replit-muted">/month</span>
+                      </>
+                    )}
                   </div>
                   <p className="text-sm text-replit-muted mt-1">{plan.description}</p>
                 </div>
@@ -119,6 +88,10 @@ export default function PricingPage() {
                   <Button className="w-full" variant="secondary" disabled>
                     <Check className="h-4 w-4 mr-1.5" /> Current Plan
                   </Button>
+                ) : plan.id === "free" ? (
+                  <Button onClick={() => router.push("/signup")} className="w-full bg-replit-green hover:bg-replit-green/90 text-white">
+                    <Sparkles className="h-4 w-4 mr-1.5" /> Get Started Free
+                  </Button>
                 ) : (
                   <Button
                     className="w-full bg-replit-accent hover:bg-replit-accent-hover text-white"
@@ -133,9 +106,11 @@ export default function PricingPage() {
                   </Button>
                 )}
 
-                <p className="mt-3 text-xs text-replit-muted text-center flex items-center justify-center gap-1">
-                  <Shield className="h-3 w-3" /> Secure payment via Razorpay
-                </p>
+                {plan.price > 0 && (
+                  <p className="mt-3 text-xs text-replit-muted text-center flex items-center justify-center gap-1">
+                    <Shield className="h-3 w-3" /> Secure payment via Razorpay
+                  </p>
+                )}
               </CardContent>
             </Card>
           )
