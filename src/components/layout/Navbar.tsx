@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSession, signOut } from "next-auth/react"
-import { LayoutDashboard, ChevronDown, Code2, CreditCard, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, ChevronDown, Code2, CreditCard, LogOut } from "lucide-react"
 import { useState } from "react"
 
 export function Navbar() {
@@ -64,13 +64,6 @@ export function Navbar() {
                           <CreditCard className="h-4 w-4" /> Upgrade Plan
                         </button>
                       </Link>
-                      {session.user.email === "bhat84617@gmail.com" && (
-                        <Link href="/admin" onClick={() => setMenuOpen(false)}>
-                          <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-replit-text hover:bg-replit-hover">
-                            <Settings className="h-4 w-4" /> Admin Panel
-                          </button>
-                        </Link>
-                      )}
                       <button onClick={() => { signOut(); setMenuOpen(false) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-replit-red hover:bg-replit-hover">
                         <LogOut className="h-4 w-4" /> Sign Out
                       </button>
