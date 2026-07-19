@@ -2,9 +2,6 @@ import { NextResponse } from "next/server"
 import { callLLM } from "@/lib/llm"
 import { readLLMConfig } from "@/lib/server-llm-config"
 
-const HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
-const HF_TOKEN = process.env.HF_TOKEN || ""
-
 export async function POST(req: Request) {
   try {
     const { prompt, type, style } = await req.json()
@@ -14,76 +11,53 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
     }
 
-    const systemPrompt = `You are a website generator. Given a user's description, generate a complete website specification as JSON.
-Follow this exact schema, return ONLY valid JSON:
+    const systemPrompt = `You generate JSON for landing pages. Return ONLY valid JSON with this schema:
 {
-  "project": {
-    "name": "string",
-    "type": "LANDING_PAGE"
-  },
-  "pages": [{
-    "path": "/",
-    "sections": [
-      {
-        "type": "Hero|Features|Pricing|Testimonials|FAQ|CTA|Footer|TrustBar",
-        "props": {}
+  "sections": [
+    {
+      "type": "Hero|Features|Pricing|Testimonials|FAQ|CTA|Footer|TrustBar",
+      "props": {
+        "headline": "Main headline based on user request",
+        "subheadline": "Supporting text",
+        "ctaPrimary": "Button text",
+        "ctaSecondary": "Button text",
+        "items": [{ "title": "...", "description": "..." }],
+        "plans": [{ "name": "...", "price": "...", "features": ["..."], "cta": "..." }],
+        "logos": ["str1","str2"],
+        "question": "...", "answer": "...",
+        "links": [{ "label": "...", "href": "..." }],
+        "social": ["twitter","github"]
       }
-    ]
-  }]
+    }
+  ]
 }
+
+Rules:
+- Hero section is REQUIRED
+- CTA and Footer are REQUIRED
+- Features/items must be tailored to the user's product, NOT generic
+- Pricing must reflect real plans
+- Content must be specific to the business described, NOT placeholder text
+- Keep headlines short and punchy
+- Never say "Get Started" or "Learn More" unless the user's business sells a service that needs those
 
 User request: ${prompt}
 Type: ${type || "LANDING_PAGE"}
-Style: ${(style || []).join(", ")}
+Style: ${(style || []).join(", ")}`
 
-Generate at minimum: Hero, Features, CTA, Footer sections. Include Pricing/Testimonials/FAQ if relevant.`
+    let sections = generateSections(prompt, type)
 
-    let sections = generateFallbackSections(prompt, type)
-    let usedAI = false
-
-    // Try configured LLM provider first (from admin settings, saved on server)
     if (llmConfig?.apiKey && llmConfig?.providerId) {
       try {
         const content = await callLLM(llmConfig, systemPrompt, prompt)
         const jsonMatch = content.match(/\{[\s\S]*\}/)
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0])
-          if (parsed?.pages?.[0]?.sections) {
-            sections = parsed.pages[0].sections
-            usedAI = true
+          if (parsed?.sections?.length >= 3) {
+            sections = parsed.sections
           }
         }
-      } catch (e) {
-        console.warn("LLM provider failed, trying fallback:", e instanceof Error ? e.message : "unknown")
-      }
-    }
-
-    // Try HuggingFace as second fallback
-    if (!usedAI && HF_TOKEN) {
-      try {
-        const response = await fetch(HF_API_URL, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${HF_TOKEN}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            inputs: `<s>[INST] ${systemPrompt} [/INST]`,
-            parameters: { max_new_tokens: 1024, temperature: 0.7, return_full_text: false },
-          }),
-        })
-
-        if (response.ok) {
-          const result = await response.json()
-          const generatedText = result[0]?.generated_text || ""
-          const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            sections = JSON.parse(jsonMatch[0])
-          }
-        }
-      } catch {
-        // Use template fallback
-      }
+      } catch {}
     }
 
     const theme = generateTheme(prompt)
@@ -106,7 +80,6 @@ function generateTheme(prompt: string) {
   const isDark = lower.includes("dark")
   const isPlayful = lower.includes("playful") || lower.includes("fun") || lower.includes("creative")
   const isCorporate = lower.includes("corporate") || lower.includes("professional") || lower.includes("business")
-
   return {
     colors: {
       primary: isPlayful ? "#7C3AED" : isCorporate ? "#2563EB" : "#7C3AED",
@@ -122,84 +95,110 @@ function generateTheme(prompt: string) {
   }
 }
 
-function generateHeadline(prompt: string): string {
-  const words = prompt.split(" ")
-  return words.length >= 4 ? `${words.slice(0, 3).join(" ")} — Reimagined` : "Your Vision, Built by AI"
+function extractName(prompt: string): string {
+  const match = prompt.match(/for\s+([^\s,.]+)/i)
+  return match ? match[1] : "Our Product"
 }
 
-function generateFallbackSections(prompt: string, type: string) {
+function generateSections(prompt: string, type: string) {
+  const name = extractName(prompt)
   const lower = prompt.toLowerCase()
-  const hasFeatures = lower.includes("feature") || lower.includes("service")
-  const hasPricing = lower.includes("pricing") || lower.includes("price") || lower.includes("plan")
-  const hasTestimonials = lower.includes("testimonial") || lower.includes("review")
-  const hasFAQ = lower.includes("faq") || lower.includes("question")
 
   const sections: Record<string, unknown>[] = []
 
   sections.push({
     type: "Hero",
     props: {
-      headline: generateHeadline(prompt),
-      subheadline: "Built with AI. Powered by your ideas.",
-      ctaPrimary: "Get Started",
-      ctaSecondary: "Learn More",
+      headline: name !== "Our Product" ? `Welcome to ${name}` : prompt.slice(0, 50),
+      subheadline: prompt,
+      ctaPrimary: "Get Started Free",
+      ctaSecondary: "See Courses",
     },
   })
 
-  if (hasFeatures) {
+  if (lower.includes("course") || lower.includes("learn") || lower.includes("teach") || lower.includes("education")) {
     sections.push({
       type: "Features",
       props: {
         items: [
-          { title: "AI-Powered", description: "Generate content and design with artificial intelligence" },
-          { title: "Fast Performance", description: "Optimized for speed and performance" },
-          { title: "Modern Design", description: "Beautiful, responsive designs that work everywhere" },
+          { title: "Expert Instructors", description: "Learn from industry professionals with years of real-world experience in their fields" },
+          { title: "Interactive Learning", description: "Hands-on projects, quizzes, and community discussions to reinforce your skills" },
+          { title: "Certificate on Completion", description: "Earn verified certificates to showcase your achievements on your resume" },
         ],
       },
     })
-  }
-
-  sections.push({ type: "TrustBar", props: { logos: ["TechCrunch", "Forbes", "Product Hunt"] } })
-
-  if (hasTestimonials) {
+  } else if (lower.includes("shop") || lower.includes("store") || lower.includes("ecommerce") || lower.includes("product")) {
     sections.push({
-      type: "Testimonials",
+      type: "Features",
       props: {
         items: [
-          { name: "User 1", role: "Founder", content: "This platform transformed how we build websites." },
-          { name: "User 2", role: "Developer", content: "Incredible quality and speed. Game changer." },
+          { title: "Curated Collection", description: "Hand-picked products that meet our quality standards for durability and design" },
+          { title: "Fast Shipping", description: "Free delivery on orders above ₹499 with guaranteed 3-5 day delivery" },
+          { title: "Easy Returns", description: "30-day hassle-free return policy. No questions asked." },
         ],
       },
     })
-  }
-
-  if (hasPricing) {
+  } else if (lower.includes("saas") || lower.includes("app") || lower.includes("software") || lower.includes("tool")) {
     sections.push({
-      type: "Pricing",
-      props: {
-        plans: [
-          { name: "Free", price: "₹0", features: ["Basic features", "Community support"] },
-          { name: "Pro", price: "₹999", features: ["Advanced features", "Priority support"] },
-          { name: "Enterprise", price: "Custom", features: ["Full suite", "Dedicated support"] },
-        ],
-      },
-    })
-  }
-
-  if (hasFAQ) {
-    sections.push({
-      type: "FAQ",
+      type: "Features",
       props: {
         items: [
-          { question: "How does it work?", answer: "Simply describe your idea and AI builds it." },
-          { question: "Can I download the code?", answer: "Yes! Full source code is available for download." },
+          { title: "Simple Setup", description: "Get started in minutes with no coding required. Import your data and go live." },
+          { title: "Powerful Analytics", description: "Track usage, revenue, and growth with detailed real-time dashboards" },
+          { title: "Team Collaboration", description: "Invite your team, set permissions, and work together seamlessly" },
+        ],
+      },
+    })
+  } else if (lower.includes("service") || lower.includes("consult") || lower.includes("agency")) {
+    sections.push({
+      type: "Features",
+      props: {
+        items: [
+          { title: "End-to-End Service", description: "From strategy to execution, we handle everything so you can focus on growth" },
+          { title: "Dedicated Team", description: "Your projects get a dedicated account manager and a team of experts" },
+          { title: "Proven Results", description: "Track record of 200+ successful projects across 15+ industries" },
+        ],
+      },
+    })
+  } else {
+    sections.push({
+      type: "Features",
+      props: {
+        items: [
+          { title: "Why Choose Us", description: prompt.length > 80 ? prompt : `${prompt} — We deliver exceptional quality and results` },
+          { title: "What We Offer", description: `Comprehensive solutions tailored to your needs in ${name}` },
+          { title: "Our Promise", description: "Quality, reliability, and customer satisfaction guaranteed" },
         ],
       },
     })
   }
 
-  sections.push({ type: "CTA", props: { headline: "Ready to Get Started?", cta: "Start Free" } })
-  sections.push({ type: "Footer", props: { links: [{ label: "Home", href: "/" }, { label: "Features", href: "#" }, { label: "Contact", href: "#" }], social: ["twitter", "github"] } })
+  sections.push({ type: "TrustBar", props: { logos: ["Trusted by 500+", "4.8★ Rating", "99% Uptime"] } })
+
+  sections.push({
+    type: "Pricing",
+    props: {
+      plans: [
+        { name: "Starter", price: "₹99/mo", features: ["Basic features", "Email support"], cta: "Start Free" },
+        { name: "Pro", price: "₹999/mo", features: ["Advanced features", "Priority support", "Analytics"], cta: "Get Pro" },
+        { name: "Enterprise", price: "₹2,999/mo", features: ["Everything in Pro", "Dedicated manager", "Custom integrations"], cta: "Contact Us" },
+      ],
+    },
+  })
+
+  sections.push({
+    type: "FAQ",
+    props: {
+      items: [
+        { question: `What is ${name}?`, answer: `${name} is a platform that ${prompt.length > 60 ? prompt.slice(0, 120) : "helps you achieve your goals with our innovative solutions"}.` },
+        { question: "How do I get started?", answer: "Simply sign up for free and explore our platform. No credit card required." },
+        { question: "Can I cancel anytime?", answer: "Yes, you can cancel your subscription at any time. No hidden fees." },
+      ],
+    },
+  })
+
+  sections.push({ type: "CTA", props: { headline: `Ready to Start with ${name}?`, cta: "Get Started Free" } })
+  sections.push({ type: "Footer", props: { links: [{ label: "Home", href: "/" }, { label: "About", href: "#" }, { label: "Contact", href: "#" }], social: ["twitter", "github"] } })
 
   return sections
 }
