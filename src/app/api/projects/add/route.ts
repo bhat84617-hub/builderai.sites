@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth/auth"
+import { auth } from "@/lib/auth/getSession"
 import { connectDB } from "@/lib/db"
 import { User } from "@/lib/models"
 

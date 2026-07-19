@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth/auth"
+import { auth } from "@/lib/auth/getSession"
 import { readLLMConfig, writeLLMConfig, clearLLMConfig } from "@/lib/server-llm-config"
 
 export async function GET() {
