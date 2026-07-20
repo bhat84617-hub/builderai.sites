@@ -3,6 +3,14 @@ import { LLMConfig } from "./models"
 import type { LLMConfig as LLMConfigType } from "./llm"
 
 export async function readLLMConfig(): Promise<LLMConfigType | null> {
+  if (process.env.LLM_API_KEY) {
+    return {
+      providerId: process.env.LLM_PROVIDER || "openrouter",
+      apiKey: process.env.LLM_API_KEY,
+      modelId: process.env.LLM_MODEL || "openrouter/auto",
+      baseUrl: process.env.LLM_BASE_URL || undefined,
+    }
+  }
   try {
     await connectDB()
     const doc = await LLMConfig.findOne()
