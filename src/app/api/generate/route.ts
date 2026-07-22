@@ -5,7 +5,13 @@ import { readLLMConfig } from "@/lib/server-llm-config"
 export async function POST(req: Request) {
   try {
     const { prompt, type, style } = await req.json()
-    const llmConfig = await readLLMConfig()
+    let llmConfig = null
+    try {
+      llmConfig = await Promise.race([
+        readLLMConfig(),
+        new Promise<null>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+      ])
+    } catch {}
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
@@ -57,7 +63,9 @@ Style: ${(style || []).join(", ")}`
             sections = parsed.sections
           }
         }
-      } catch {}
+      } catch (e) {
+        console.error("LLM call failed:", e instanceof Error ? e.message : "unknown")
+      }
     }
 
     const theme = generateTheme(prompt)
