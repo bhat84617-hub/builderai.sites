@@ -151,19 +151,29 @@ export async function callLLM(config: LLMConfig, systemPrompt: string, userPromp
     ...(provider.headers ? provider.headers(config.apiKey) : { "Authorization": `Bearer ${config.apiKey}` }),
   }
 
-  const res = await fetch(baseUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 20000)
 
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.statusText)
-    throw new Error(`LLM API error (${res.status}): ${err}`)
+  try {
+    const res = await fetch(baseUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => res.statusText)
+      throw new Error(`LLM API error (${res.status}): ${err}`)
+    }
+
+    const data = await res.json()
+    const content = provider.parseResponse(data)
+    if (!content) throw new Error("Empty response from LLM")
+    return content
+  } catch (e) {
+    clearTimeout(timeout)
+    throw e
   }
-
-  const data = await res.json()
-  const content = provider.parseResponse(data)
-  if (!content) throw new Error("Empty response from LLM")
-  return content
 }

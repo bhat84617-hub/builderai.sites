@@ -73,6 +73,8 @@ function GenerateContent() {
           name: data.project?.name || prompt.slice(0, 40),
           type: "LANDING_PAGE",
           prompt,
+          sections: data.pages?.[0]?.sections || [],
+          theme: data.project?.theme || {},
         }),
       })
       const saved = await saveRes.json()

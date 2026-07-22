@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { name, type, prompt } = await req.json()
+  const { name, type, prompt, sections, theme } = await req.json()
   await connectDB()
 
   const project = {
@@ -18,6 +18,8 @@ export async function POST(req: Request) {
     prompt,
     status: "READY",
     userId: session.user.id,
+    sections: sections || [],
+    theme: theme || {},
     createdAt: new Date(),
   }
 

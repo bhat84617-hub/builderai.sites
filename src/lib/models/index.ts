@@ -19,6 +19,8 @@ export interface IProject {
   prompt: string
   status: "DRAFT" | "GENERATING" | "READY" | "FAILED"
   userId: string
+  sections?: any[]
+  theme?: any
   createdAt: Date
 }
 
@@ -35,6 +37,8 @@ const ProjectSchema = new Schema<IProject>({
   prompt: { type: String, required: true },
   status: { type: String, enum: ["DRAFT", "GENERATING", "READY", "FAILED"], default: "READY" },
   userId: { type: String, required: true },
+  sections: { type: Schema.Types.Mixed, default: [] },
+  theme: { type: Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now },
 })
 
